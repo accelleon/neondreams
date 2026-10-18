@@ -26,13 +26,15 @@ for (const folder of ['electron-browser', 'electron-sandbox']) {
     await setGlow(f.root, f.css, true);
     await setGlow(f.root, f.css, true);
     const enabled = await fs.readFile(f.html, 'utf8');
-    assert.equal(enabled.split('href="./neondreams-glow.css"').length, 2);
-    assert.equal(await fs.readFile(path.join(f.dir, 'neondreams-glow.css'), 'utf8'), f.css);
+    const filename = (await inspectGlow(f.root, f.css)).stylesheetFile;
+    assert.match(filename, /^neondreams-glow-[a-f0-9]{16}\.css$/);
+    assert.equal(enabled.split(`href="./${filename}"`).length, 2);
+    assert.equal(await fs.readFile(path.join(f.dir, filename), 'utf8'), f.css);
     await fs.writeFile(f.html, enabled.replace('<body>', '<body data-unrelated="keep">'));
     await setGlow(f.root, f.css, false);
     await setGlow(f.root, f.css, false);
     assert.equal(await fs.readFile(f.html, 'utf8'), original.replace('<body>', '<body data-unrelated="keep">'));
-    await assert.rejects(fs.access(path.join(f.dir, 'neondreams-glow.css')), { code: 'ENOENT' });
+    await assert.rejects(fs.access(path.join(f.dir, filename)), { code: 'ENOENT' });
   });
 }
 test('unsupported installation and unexpected markup remain untouched', async t => {
@@ -74,10 +76,40 @@ test('status distinguishes missing, current, outdated and removed glow', async t
   const installed = await inspectGlow(f.root, f.css);
   assert.equal(installed.linked, true);
   assert.equal(installed.stylesheetCurrent, true);
-  await fs.appendFile(path.join(f.dir, 'neondreams-glow.css'), '\n/* previous revision */');
+  await fs.appendFile(path.join(f.dir, installed.stylesheetFile), '\n/* previous revision */');
   assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, false);
   await setGlow(f.root, f.css, true);
   assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, true);
   await setGlow(f.root, f.css, false);
   assert.equal((await inspectGlow(f.root, f.css)).linked, false);
+});
+
+test('changed profiles use new CSS URLs without altering assets loaded by old windows', async t => {
+  const f = await fixture(t);
+  await setGlow(f.root, f.css, true);
+  const original = await inspectGlow(f.root, f.css);
+  const updatedCss = `${f.css}\n/* another strength */`;
+  await setGlow(f.root, updatedCss, true);
+  const updated = await inspectGlow(f.root, updatedCss);
+  assert.notEqual(updated.stylesheetFile, original.stylesheetFile);
+  assert.equal(await fs.readFile(path.join(f.dir, original.stylesheetFile), 'utf8'), f.css);
+  assert.equal(updated.stylesheetCurrent, true);
+  assert.equal((await fs.readFile(f.html, 'utf8')).split('<!-- Neon Dreams optional glow -->').length, 2);
+  await setGlow(f.root, updatedCss, false);
+  assert.deepEqual((await fs.readdir(f.dir)).filter(name => name.endsWith('.css')), []);
+});
+
+test('legacy fixed stylesheet links migrate without duplicating the patch', async t => {
+  const f = await fixture(t);
+  const legacy = '<!-- Neon Dreams optional glow -->\n<link rel="stylesheet" href="./neondreams-glow.css">';
+  const original = await fs.readFile(f.html, 'utf8');
+  await fs.writeFile(f.html, original.replace('</head>', `${legacy}\n</head>`));
+  await fs.writeFile(path.join(f.dir, 'neondreams-glow.css'), f.css);
+  assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, false, 'Legacy URL needs migration even when contents match');
+  await setGlow(f.root, f.css, true);
+  assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, true);
+  assert.ok(!(await fs.readFile(f.html, 'utf8')).includes('href="./neondreams-glow.css"'));
+  await setGlow(f.root, f.css, false);
+  assert.equal(await fs.readFile(f.html, 'utf8'), original);
+  await assert.rejects(fs.access(path.join(f.dir, 'neondreams-glow.css')), { code: 'ENOENT' });
 });

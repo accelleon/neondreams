@@ -6,7 +6,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { renderGlow } = require('../src/glow-style');
 
-function host(installed = false) {
+function host(installed = false, holdReloadNotification = false) {
   const values = new Map([
     ['neondreams.glow.strength', 60], ['workbench.colorTheme', 'Neon Dreams'],
     ['editor.experimentalGpuAcceleration', 'on'], ['terminal.integrated.gpuAcceleration', 'auto']
@@ -23,7 +23,7 @@ function host(installed = false) {
     version: 'test', UIKind: { Desktop: 1 }, ConfigurationTarget: { Global: 1 }, env: { uiKind: 1, appRoot: '/fake/vscode', clipboard: { writeText: async text => state.copied.push(text) } },
     window: {
       createOutputChannel: () => ({ ...disposable, appendLine() {} }),
-      showInformationMessage: async title => title === 'Neon Dreams Glow Status' ? state.informationAnswer : undefined,
+      showInformationMessage: async title => title === 'Neon Dreams Glow Status' ? state.informationAnswer : holdReloadNotification ? new Promise(() => {}) : undefined,
       showErrorMessage: async message => errors.push(message),
       showWarningMessage: async () => state.warningAnswer,
       showQuickPick: async () => state.picked
@@ -51,7 +51,7 @@ function host(installed = false) {
   const source = fs.readFileSync(path.join(__dirname, '../src/extension.js'), 'utf8');
   const sandbox = { module: { exports: {} }, process, require: name => name === 'vscode' ? vscode : name === './glow' ? glow : name === './glow-style' ? { renderGlow } : require(name) };
   vm.runInNewContext(source, sandbox);
-  sandbox.module.exports.activate({ extensionPath: path.join(__dirname, '..'), subscriptions: [] });
+  sandbox.module.exports.activate({ extensionPath: path.join(__dirname, '..'), extension: { packageJSON: { version: 'test-build' } }, subscriptions: [] });
   state.command = name => commands.get(`neondreams.${name}`)();
   state.setStrength = value => vscode.workspace.getConfiguration('neondreams.glow').update('strength', value, 1);
   state.flush = () => state.command('glowStatus');
@@ -119,6 +119,16 @@ test('status copies diagnostic text only when Copy Status is selected', async ()
   await h.command('glowStatus');
   assert.equal(h.copied.length, 1);
   assert.ok(h.copied[0].includes('Editor boost: 2x'));
+  assert.ok(h.copied[0].includes('Neon Dreams extension: test-build'));
   assert.ok(h.copied[0].includes('Editor GPU acceleration: on'));
+  assert.equal(h.errors.length, 0);
+});
+
+test('an undismissed reload notification does not block subsequent strength changes', { timeout: 2000 }, async () => {
+  const h = host(true, true);
+  await h.flush();
+  await h.setStrength(0);
+  await h.flush();
+  assert.ok(h.writes.at(-1).css.includes('--nd-text-glow: none;'));
   assert.equal(h.errors.length, 0);
 });

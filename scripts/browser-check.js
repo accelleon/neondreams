@@ -111,17 +111,27 @@ async function run() {
       await setGlow(appRoot, css, true);
       const installed = await context.newPage();
       const server = createServer(async (request, response) => {
-        const filename = { '/workbench.html': 'workbench.html', '/neondreams-glow.css': 'neondreams-glow.css' }[request.url];
+        const filename = request.url === '/workbench.html' ? 'workbench.html' : /^\/neondreams-glow(?:-[a-f0-9]{16})?\.css$/.test(request.url) ? request.url.slice(1) : undefined;
         if (!filename) { response.writeHead(404).end(); return; }
         try {
           const contents = await fs.readFile(path.join(dir, filename));
-          response.writeHead(200, { 'Content-Type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/html; charset=utf-8', 'Cache-Control': 'no-store' }).end(contents);
+          response.writeHead(200, { 'Content-Type': filename.endsWith('.css') ? 'text/css; charset=utf-8' : 'text/html; charset=utf-8', 'Cache-Control': filename.endsWith('.css') ? 'public, max-age=31536000, immutable' : 'no-store' }).end(contents);
         } catch { response.writeHead(404).end(); }
       });
       try {
         await new Promise((resolve, reject) => { server.once('error', reject); server.listen(0, '127.0.0.1', resolve); });
         await installed.goto(`http://127.0.0.1:${server.address().port}/workbench.html`);
         assert.deepEqual(await styles(installed), main, 'Installed external stylesheet loads under CSP');
+        await setGlow(appRoot, renderGlow(template, { strength: 0 }), true);
+        const nextWindow = await context.newPage();
+        await nextWindow.goto(`http://127.0.0.1:${server.address().port}/workbench.html`);
+        assert.equal((await styles(nextWindow)).shadow, 'none', 'Strength 0 reaches a new renderer even when old CSS is cached');
+        await setGlow(appRoot, renderGlow(template, { strength: 100 }), true);
+        const onAgain = await context.newPage();
+        await onAgain.goto(`http://127.0.0.1:${server.address().port}/workbench.html`);
+        assert.notEqual((await styles(onAgain)).shadow, 'none', 'Strength 100 replaces the cached zero-strength style');
+        await nextWindow.close();
+        await onAgain.close();
         await setGlow(appRoot, css, false);
         await installed.reload();
         assert.equal((await styles(installed)).shadow, 'none', 'Removing glow removes its rendered effect');

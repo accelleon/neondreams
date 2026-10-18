@@ -22,9 +22,12 @@ function activate(context) {
   };
   const stylesheet = async () => renderGlow(await fs.readFile(path.join(context.extensionPath, 'assets/glow.css'), 'utf8'), settings());
   const desktop = () => vscode.env.uiKind === vscode.UIKind.Desktop;
-  const notifyReload = async message => {
-    const choice = await vscode.window.showInformationMessage(`${message} Reload each VS Code window to apply.`, 'Reload This Window');
-    if (choice) await vscode.commands.executeCommand('workbench.action.reloadWindow');
+  const notifyReload = message => {
+    // An ignored notification can stay pending indefinitely. Never hold the
+    // installation/update queue while waiting for its UI action.
+    void vscode.window.showInformationMessage(`${message} Reload each VS Code window to apply.`, 'Reload This Window')
+      .then(choice => choice ? vscode.commands.executeCommand('workbench.action.reloadWindow') : undefined)
+      .catch(error => output.appendLine(error.message));
   };
   const useDomRendering = async () => {
     await vscode.workspace.getConfiguration('editor').update('experimentalGpuAcceleration', 'off', vscode.ConfigurationTarget.Global);
@@ -75,12 +78,14 @@ function activate(context) {
     const status = await inspectGlow(vscode.env.appRoot, css);
     const detail = [
       `VS Code: ${vscode.version} (${process.platform})`,
+      `Neon Dreams extension: ${context.extension?.packageJSON?.version ?? 'unknown'}`,
       `Selected theme: ${vscode.workspace.getConfiguration('workbench').get('colorTheme')}`,
       `Glow strength: ${settings().strength ?? 60} / 100`,
       `Editor boost: ${settings().editorBoost ?? 2}x`,
       `Surfaces: ${JSON.stringify(settings())}`,
       `Glow link: ${status.linked ? 'installed' : 'missing'}`,
       `Stylesheet: ${status.stylesheetPresent ? (status.stylesheetCurrent ? 'current' : 'outdated — run Enable Glow again') : 'missing — run Enable Glow'}`,
+      `Stylesheet file: ${status.stylesheetFile ?? 'none'}`,
       `Editor GPU acceleration: ${vscode.workspace.getConfiguration('editor').get('experimentalGpuAcceleration', 'off')}`,
       `Terminal GPU acceleration: ${vscode.workspace.getConfiguration('terminal.integrated').get('gpuAcceleration', 'auto')}`,
       `Workbench: ${status.workbenchPath}`, '',

@@ -4,7 +4,16 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 
 const marker = '<!-- Neon Dreams optional glow -->';
-const tag = `${marker}\n<link rel="stylesheet" href="./neondreams-glow.css">`;
+const assetPattern = /^neondreams-glow(?:-[a-f0-9]{16})?\.css$/;
+const assetName = css => `neondreams-glow-${crypto.createHash('sha256').update(css).digest('hex').slice(0, 16)}.css`;
+const linkTag = file => `${marker}\n<link rel="stylesheet" href="./${file}">`;
+
+function installedLink(html) {
+  if (!html.includes(marker)) return undefined;
+  const matches = [...html.matchAll(/<!-- Neon Dreams optional glow -->\r?\n<link rel="stylesheet" href="\.\/(neondreams-glow(?:-[a-f0-9]{16})?\.css)">/g)];
+  if (matches.length !== 1 || html.split(marker).length !== 2) throw new Error('Unexpected glow marker; no files changed.');
+  return { tag: matches[0][0], file: matches[0][1] };
+}
 const header = '/* Neon Dreams optional glow — managed by accelleon.neondreams */';
 
 async function findWorkbench(appRoot) {
@@ -43,43 +52,55 @@ async function ownedStylesheet(file) {
   }
 }
 
+async function managedAssets(directory) {
+  const names = (await fs.readdir(directory)).filter(name => assetPattern.test(name));
+  for (const name of names) await ownedStylesheet(path.join(directory, name));
+  return names;
+}
+
 async function setGlow(appRoot, css, enabled) {
   const htmlPath = await findWorkbench(appRoot);
-  const cssPath = path.join(path.dirname(htmlPath), 'neondreams-glow.css');
+  const directory = path.dirname(htmlPath);
   const original = await fs.readFile(htmlPath, 'utf8');
-  const owned = await ownedStylesheet(cssPath);
+  const previous = installedLink(original);
+  const assets = await managedAssets(directory);
   if (enabled) {
     if (!css.startsWith(header)) throw new Error('Invalid bundled glow stylesheet.');
     if (!original.includes('</head>')) throw new Error('Unsupported workbench markup; no files changed.');
-    if (original.includes(marker) && !original.includes(tag)) throw new Error('Unexpected glow marker; no files changed.');
-    // Write the asset first so the workbench never references a missing file.
-    if (owned) await atomicWrite(cssPath, css);
-    else await fs.writeFile(cssPath, css, { flag: 'wx' });
-    if (!original.includes(tag)) {
-      try { await atomicWrite(htmlPath, original.replace('</head>', `${tag}\n</head>`)); }
+    const filename = assetName(css);
+    const cssPath = path.join(directory, filename);
+    const owned = assets.includes(filename);
+    // Every distinct profile gets a distinct URL, so renderer caches cannot reuse
+    // an older strength. Retain earlier managed assets for still-open windows.
+    if (owned) {
+      if (await fs.readFile(cssPath, 'utf8') !== css) await atomicWrite(cssPath, css);
+    } else await fs.writeFile(cssPath, css, { flag: 'wx' });
+    const next = previous ? original.replace(previous.tag, linkTag(filename)) : original.replace('</head>', `${linkTag(filename)}\n</head>`);
+    if (next !== original) {
+      try { await atomicWrite(htmlPath, next); }
       catch (error) {
         if (!owned) await fs.rm(cssPath, { force: true });
         throw error;
       }
     }
   } else {
-    if (original.includes(marker) && !original.includes(tag)) throw new Error('Unexpected glow marker; no files changed.');
-    if (original.includes(tag)) await atomicWrite(htmlPath, original.replace(`${tag}\n`, '').replace(tag, ''));
-    if (owned) await fs.rm(cssPath);
+    if (previous) await atomicWrite(htmlPath, original.replace(`${previous.tag}\n`, '').replace(previous.tag, ''));
+    for (const filename of assets) await fs.rm(path.join(directory, filename));
   }
 }
 
 async function inspectGlow(appRoot, expectedCss) {
   const htmlPath = await findWorkbench(appRoot);
-  const html = await fs.readFile(htmlPath, 'utf8');
-  const cssPath = path.join(path.dirname(htmlPath), 'neondreams-glow.css');
-  const owned = await ownedStylesheet(cssPath);
+  const link = installedLink(await fs.readFile(htmlPath, 'utf8'));
+  const cssPath = link ? path.join(path.dirname(htmlPath), link.file) : undefined;
+  const owned = cssPath ? await ownedStylesheet(cssPath) : false;
   const css = owned ? await fs.readFile(cssPath, 'utf8') : undefined;
   return {
     workbenchPath: htmlPath,
-    linked: html.includes(tag),
+    stylesheetFile: link?.file,
+    linked: Boolean(link),
     stylesheetPresent: owned,
-    stylesheetCurrent: css === expectedCss
+    stylesheetCurrent: Boolean(link && link.file === assetName(expectedCss) && css === expectedCss)
   };
 }
 

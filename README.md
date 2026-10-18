@@ -16,7 +16,7 @@ TextMate and semantic tokens share the palette. Every syntax color has at least 
 
 ## Try it
 
-[Download Neon Dreams 0.1.6 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.6.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
+[Download Neon Dreams 0.1.7 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.7.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
 
 Open this folder in desktop VS Code and press **F5** to launch the Extension Development Host. Select **Preferences: Color Theme → Neon Dreams**. No dependency installation is required to run the theme or extension source.
 
@@ -27,7 +27,7 @@ npm ci
 npm run check
 npm test
 npm run package
-code --install-extension neondreams-0.1.6.vsix
+code --install-extension neondreams-0.1.7.vsix
 ```
 
 Select Neon Dreams separately in any profile or workspace that overrides `workbench.colorTheme`. The default user theme applies to ordinary new windows. Native colors also follow detached editor windows.
@@ -61,9 +61,13 @@ Pinned sticky-scroll headers use the same editor halo, boost, and toggle as the 
 
 When glow is already installed, changes and extension updates automatically regenerate its stylesheet; **reload every open window** to apply it. These settings never install a disabled patch. If startup refresh fails or the status shows outdated CSS, run **Enable Glow** again. Settings apply to the VS Code installation, so different profiles cannot maintain different installed strengths at the same time; the last applied settings win.
 
+Since 0.1.7 each distinct glow profile uses a content-versioned stylesheet URL, so cached CSS cannot keep an old strength active after loading the updated workbench. The previous fixed-filename link migrates automatically. Old managed stylesheets remain available for still-open windows and are removed by **Disable Glow**. Reload reminders do not block later settings changes or commands.
+
 ### Missing glow and rendering modes
 
 If glow remains invisible, run **Neon Dreams: Check Glow Status**. The dialog reports the selected theme, strength and surfaces, missing or outdated stylesheet, VS Code version, and editor/terminal GPU settings. It checks the patch on disk; it cannot inspect the renderer's loaded CSS.
+
+Status also includes the **Neon Dreams extension version** and the **stylesheet filename**. After upgrading from an older version, run Enable Glow and fully quit/reopen VS Code once. If changing from strength 0 to 100 (reloading after each change) produces no visible difference, the renderer may still be using other/stale styling; do not keep raising intensity. Share Copy Status results so the installed build and profile can be checked.
 
 Use the dialog's **Copy Status** button to copy the results for troubleshooting.
 
