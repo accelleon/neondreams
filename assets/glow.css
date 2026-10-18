@@ -1,0 +1,20 @@
+/* Neon Dreams optional glow — managed by accelleon.neondreams */
+/* VS Code clones head stylesheets into auxiliary windows. Keep this a plain stylesheet. */
+.monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json .monaco-editor .view-line span {
+  text-shadow: 0 0 2px currentColor, 0 0 7px color-mix(in srgb, currentColor 28%, transparent);
+}
+.monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json .monaco-editor .cursor {
+  box-shadow: 0 0 7px #ff70bd66;
+}
+.monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json :is(.monaco-list-row.focused, .monaco-list-row.selected, .monaco-menu .action-item.focused) {
+  box-shadow: inset 2px 0 0 #69e5ff, inset 5px 0 8px #69e5ff12;
+}
+.monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json .part.statusbar {
+  box-shadow: 0 -1px 8px #bd93ff20;
+}
+@media (prefers-contrast: more), (forced-colors: active) {
+  .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json * {
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+}

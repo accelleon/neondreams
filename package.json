@@ -1,0 +1,64 @@
+{
+  "name": "neondreams",
+  "displayName": "Neon Dreams",
+  "description": "A readable true-black synthwave theme with distinct syntax colors and optional, color-preserving glow.",
+  "version": "0.1.1",
+  "publisher": "accelleon",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/accelleon/neondreams.git"
+  },
+  "engines": {
+    "vscode": "^1.96.0"
+  },
+  "categories": [
+    "Themes"
+  ],
+  "keywords": [
+    "synthwave",
+    "neon",
+    "dark",
+    "glow"
+  ],
+  "main": "./src/extension.js",
+  "extensionKind": [
+    "ui"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": true
+    },
+    "virtualWorkspaces": true
+  },
+  "contributes": {
+    "themes": [
+      {
+        "label": "Neon Dreams",
+        "uiTheme": "vs-dark",
+        "path": "./themes/neon-dreams-color-theme.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "neondreams.enableGlow",
+        "title": "Neon Dreams: Enable Glow (Desktop, Experimental)"
+      },
+      {
+        "command": "neondreams.disableGlow",
+        "title": "Neon Dreams: Disable Glow"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node --test",
+    "test:browser": "node scripts/browser-check.js",
+    "check": "node --check src/extension.js && node --check src/glow.js && node scripts/validate-theme.js",
+    "package": "vsce package --no-dependencies",
+    "vscode:prepublish": "npm run check"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "3.7.1",
+    "@playwright/test": "1.61.1"
+  }
+}
