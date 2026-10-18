@@ -17,13 +17,13 @@ function host(installed = false) {
   const errors = [];
   let linked = installed;
   let installedCss = installed ? 'old CSS' : undefined;
-  const state = { warningAnswer: undefined, picked: undefined, values, writes, errors };
+  const state = { warningAnswer: undefined, informationAnswer: undefined, copied: [], picked: undefined, values, writes, errors };
   const disposable = { dispose() {} };
   const vscode = {
-    version: 'test', UIKind: { Desktop: 1 }, ConfigurationTarget: { Global: 1 }, env: { uiKind: 1, appRoot: '/fake/vscode' },
+    version: 'test', UIKind: { Desktop: 1 }, ConfigurationTarget: { Global: 1 }, env: { uiKind: 1, appRoot: '/fake/vscode', clipboard: { writeText: async text => state.copied.push(text) } },
     window: {
       createOutputChannel: () => ({ ...disposable, appendLine() {} }),
-      showInformationMessage: async () => undefined,
+      showInformationMessage: async title => title === 'Neon Dreams Glow Status' ? state.informationAnswer : undefined,
       showErrorMessage: async message => errors.push(message),
       showWarningMessage: async () => state.warningAnswer,
       showQuickPick: async () => state.picked
@@ -108,5 +108,17 @@ test('strength picker persists the selected value and refreshes an installed pat
   await h.flush();
   assert.equal(h.values.get('neondreams.glow.strength'), 0);
   assert.ok(h.writes.at(-1).css.includes('--nd-text-glow: none;'));
+  assert.equal(h.errors.length, 0);
+});
+
+test('status copies diagnostic text only when Copy Status is selected', async () => {
+  const h = host();
+  await h.flush();
+  assert.equal(h.copied.length, 0);
+  h.informationAnswer = 'Copy Status';
+  await h.command('glowStatus');
+  assert.equal(h.copied.length, 1);
+  assert.ok(h.copied[0].includes('Editor boost: 2x'));
+  assert.ok(h.copied[0].includes('Editor GPU acceleration: on'));
   assert.equal(h.errors.length, 0);
 });

@@ -5,12 +5,19 @@ function renderGlow(template, options = {}) {
     ? Math.min(100, Math.max(0, options.strength)) : 60;
   const scale = strength / 60;
   const number = value => Number(value.toFixed(2));
-  const shadow = strength === 0 ? 'none' : [[2, 70], [6, 60], [14, 40]].map(([radius, alpha]) =>
-    `0 0 ${number(radius * Math.sqrt(scale))}px color-mix(in srgb, currentColor ${number(Math.min(100, alpha * scale))}%, transparent)`
-  ).join(', ');
-  const declarations = [`--nd-text-glow: ${shadow}`];
+  const layers = (opacity = 1, spread = 1) => [[2, 70], [6, 60], [14, 40]].map(([radius, alpha]) =>
+    `0 0 ${number(radius * Math.sqrt(scale) * spread)}px color-mix(in srgb, currentColor ${number(Math.min(100, alpha * scale) * opacity)}%, transparent)`
+  );
+  const shadow = strength === 0 ? 'none' : layers().join(', ');
+  const boost = typeof options.editorBoost === 'number' && Number.isFinite(options.editorBoost)
+    ? Math.min(4, Math.max(1, options.editorBoost)) : 2;
+  const editorLayers = layers();
+  // Stack colored halos to increase visible energy without whitening the glyph or
+  // spreading all of the extra glow beyond the editor's viewport/line boundaries.
+  for (let remaining = boost - 1; remaining > 0; remaining -= 1) editorLayers.push(...layers(Math.min(1, remaining), 0.85));
+  const declarations = [`--nd-text-glow: ${shadow}`, `--nd-editor-text-glow: ${strength === 0 ? 'none' : editorLayers.join(', ')}`];
   for (const [option, property] of [['editor', 'editor'], ['terminal', 'terminal'], ['explorer', 'explorer'], ['debugConsole', 'debug']]) {
-    declarations.push(`--nd-${property}-glow: ${options[option] === false ? 'none' : 'var(--nd-text-glow)'}`);
+    declarations.push(`--nd-${property}-glow: ${options[option] === false ? 'none' : option === 'editor' ? 'var(--nd-editor-text-glow)' : 'var(--nd-text-glow)'}`);
   }
   const tint = (hex, alpha) => `color-mix(in srgb, ${hex} ${number(Math.min(100, alpha * scale))}%, transparent)`;
   declarations.push(`--nd-cursor-glow: ${strength === 0 || options.editor === false ? 'none' : `0 0 ${number(5 * Math.sqrt(scale))}px ${tint('#ff70bd', 60)}, 0 0 ${number(12 * Math.sqrt(scale))}px ${tint('#ff70bd', 40)}`}`);

@@ -18,7 +18,7 @@ function activate(context) {
   };
   const settings = () => {
     const config = vscode.workspace.getConfiguration('neondreams.glow');
-    return Object.fromEntries(['strength', 'editor', 'terminal', 'explorer', 'debugConsole'].map(key => [key, config.get(key)]));
+    return Object.fromEntries(['strength', 'editorBoost', 'editor', 'terminal', 'explorer', 'debugConsole'].map(key => [key, config.get(key)]));
   };
   const stylesheet = async () => renderGlow(await fs.readFile(path.join(context.extensionPath, 'assets/glow.css'), 'utf8'), settings());
   const desktop = () => vscode.env.uiKind === vscode.UIKind.Desktop;
@@ -77,6 +77,7 @@ function activate(context) {
       `VS Code: ${vscode.version} (${process.platform})`,
       `Selected theme: ${vscode.workspace.getConfiguration('workbench').get('colorTheme')}`,
       `Glow strength: ${settings().strength ?? 60} / 100`,
+      `Editor boost: ${settings().editorBoost ?? 2}x`,
       `Surfaces: ${JSON.stringify(settings())}`,
       `Glow link: ${status.linked ? 'installed' : 'missing'}`,
       `Stylesheet: ${status.stylesheetPresent ? (status.stylesheetCurrent ? 'current' : 'outdated — run Enable Glow again') : 'missing — run Enable Glow'}`,
@@ -87,7 +88,8 @@ function activate(context) {
       'Editor and terminal canvas/WebGL text cannot use CSS text shadows. Run Neon Dreams: Use Compatible Text Rendering, then check for workspace overrides.',
       'OS high contrast / forced colors intentionally suppress glow. Settings apply to all windows using this installation; profiles can overwrite the installed strength.'
     ].join('\n');
-    await vscode.window.showInformationMessage('Neon Dreams Glow Status', { modal: true, detail });
+    const choice = await vscode.window.showInformationMessage('Neon Dreams Glow Status', { modal: true, detail }, 'Copy Status');
+    if (choice === 'Copy Status') await vscode.env.clipboard.writeText(detail);
   });
 
   for (const [name, enabled] of [['enableGlow', true], ['disableGlow', false]]) {

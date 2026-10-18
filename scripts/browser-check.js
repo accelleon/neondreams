@@ -64,6 +64,13 @@ async function run() {
     const strong = (await styles(page)).shadow;
     assert.notEqual(subtle, strong, 'Strength changes the rendered shadow');
     assert.equal((await styles(page)).color, before, 'Strength leaves foreground unchanged');
+    await rewrite({ strength: 100, editorBoost: 1 });
+    const unboostedEditor = (await styles(page)).shadow;
+    const unboostedTerminal = await shadow('#terminal');
+    await rewrite({ strength: 100, editorBoost: 4 });
+    assert.notEqual((await styles(page)).shadow, unboostedEditor, 'Editor boost increases editor halo layers');
+    assert.equal(await shadow('#terminal'), unboostedTerminal, 'Editor boost leaves terminal glow unchanged');
+    assert.equal((await styles(page)).color, before, 'Boost preserves text foreground');
     for (const [option, target] of [['editor', '#functionA'], ['terminal', '#terminal'], ['explorer', '#file'], ['debugConsole', '#debug']]) {
       await rewrite({ [option]: false });
       assert.equal(await shadow(target), 'none', `${option} can be disabled`);

@@ -2,13 +2,14 @@
 /* VS Code clones head stylesheets into auxiliary windows. Keep this a plain stylesheet. */
 .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json {
   --nd-text-glow: 0 0 2px color-mix(in srgb, currentColor 70%, transparent), 0 0 6px color-mix(in srgb, currentColor 60%, transparent), 0 0 14px color-mix(in srgb, currentColor 40%, transparent);
+  --nd-editor-text-glow: var(--nd-text-glow), var(--nd-text-glow);
   --nd-cursor-glow: 0 0 5px #ff70bd99, 0 0 12px #ff70bd66;
   --nd-row-glow: inset 2px 0 0 #69e5ff, inset 5px 0 8px #69e5ff12;
   --nd-status-glow: 0 -1px 8px #bd93ff20;
 }
 /* Apply at each span, including nested semantic tokens: currentColor stays local to the glyph. */
 .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json .monaco-editor :is(.view-line, .view-line span) {
-  text-shadow: var(--nd-editor-glow, var(--nd-text-glow)) !important;
+  text-shadow: var(--nd-editor-glow, var(--nd-editor-text-glow)) !important;
 }
 .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json .xterm .xterm-rows :is(div, span) {
   text-shadow: var(--nd-terminal-glow, var(--nd-text-glow)) !important;
@@ -31,6 +32,7 @@
 @media (prefers-contrast: more), (forced-colors: active) {
   .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json {
     --nd-text-glow: none !important;
+    --nd-editor-text-glow: none !important;
     --nd-cursor-glow: none !important;
     --nd-row-glow: none !important;
     --nd-status-glow: none !important;
