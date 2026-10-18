@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs/promises');
 const os = require('node:os');
 const path = require('node:path');
-const { setGlow, findWorkbench } = require('../src/glow');
+const { setGlow, findWorkbench, inspectGlow } = require('../src/glow');
 const { validate } = require('../scripts/validate-theme');
 const cssFile = path.join(__dirname, '..', 'assets', 'glow.css');
 
@@ -62,4 +62,22 @@ test('refuses a modified marker without altering the workbench', async t => {
   await fs.writeFile(f.html, html);
   await assert.rejects(setGlow(f.root, f.css, false), /Unexpected glow marker/);
   assert.equal(await fs.readFile(f.html, 'utf8'), html);
+});
+
+test('status distinguishes missing, current, outdated and removed glow', async t => {
+  const f = await fixture(t);
+  const missing = await inspectGlow(f.root, f.css);
+  assert.equal(missing.linked, false);
+  assert.equal(missing.stylesheetPresent, false);
+  assert.equal(missing.stylesheetCurrent, false);
+  await setGlow(f.root, f.css, true);
+  const installed = await inspectGlow(f.root, f.css);
+  assert.equal(installed.linked, true);
+  assert.equal(installed.stylesheetCurrent, true);
+  await fs.appendFile(path.join(f.dir, 'neondreams-glow.css'), '\n/* previous revision */');
+  assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, false);
+  await setGlow(f.root, f.css, true);
+  assert.equal((await inspectGlow(f.root, f.css)).stylesheetCurrent, true);
+  await setGlow(f.root, f.css, false);
+  assert.equal((await inspectGlow(f.root, f.css)).linked, false);
 });

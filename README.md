@@ -16,7 +16,7 @@ TextMate and semantic tokens share the palette. Every syntax color has at least 
 
 ## Try it
 
-[Download Neon Dreams 0.1.1 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.1.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
+[Download Neon Dreams 0.1.2 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.2.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
 
 Open this folder in desktop VS Code and press **F5** to launch the Extension Development Host. Select **Preferences: Color Theme → Neon Dreams**. No dependency installation is required to run the theme or extension source.
 
@@ -27,14 +27,18 @@ npm ci
 npm run check
 npm test
 npm run package
-code --install-extension neondreams-0.1.1.vsix
+code --install-extension neondreams-0.1.2.vsix
 ```
 
 Select Neon Dreams separately in any profile or workspace that overrides `workbench.colorTheme`. The default user theme applies to ordinary new windows. Native colors also follow detached editor windows.
 
 ## Optional glow (experimental desktop feature)
 
-Run **Neon Dreams: Enable Glow (Desktop, Experimental)**, accept the installation modification dialog, then **quit and reopen all VS Code windows**. Glow follows each token's `currentColor`, with a tight halo and a faint outer halo. It never replaces the text foreground, changes text opacity, or blurs the editor. High contrast OS settings suppress the glow.
+Run **Neon Dreams: Enable Glow (Desktop, Experimental)**, accept the installation modification dialog, then **quit and reopen all VS Code windows**. Glow follows each token's `currentColor`, with three halo layers at 2, 6, and 14 pixels. It never replaces the text foreground, changes text opacity, or blurs the editor. High contrast OS settings suppress the glow.
+
+After updating this extension, **run Enable Glow again** to replace the previously installed stylesheet, then restart every window. Installing a newer VSIX alone does not update the stylesheet in the VS Code installation.
+
+If glow remains invisible, run **Neon Dreams: Check Glow Status**. The dialog reports the active theme, missing or outdated stylesheet, VS Code version, and editor GPU setting. It checks the patch on disk; it cannot inspect the renderer's loaded CSS. If `editor.experimentalGpuAcceleration` is `on`, set it to `off` and reload: canvas-rendered text cannot receive CSS text shadows. Windows contrast themes / forced colors also intentionally suppress glow. Check that Neon Dreams is selected in the affected window.
 
 VS Code has no supported theme API for text shadows. This command adds one local stylesheet link to the desktop workbench HTML; it does not weaken the Content Security Policy, alter checksums, or suppress integrity checks. VS Code may report the modified installation as corrupt. Do not enable glow if this is unacceptable. It requires a writable installation; the extension does not elevate privileges. Managed, read-only, signed, or platform-restricted installations may prevent it or reject the modified application. Theme colors still work.
 

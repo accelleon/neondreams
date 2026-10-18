@@ -69,4 +69,18 @@ async function setGlow(appRoot, css, enabled) {
   }
 }
 
-module.exports = { findWorkbench, setGlow };
+async function inspectGlow(appRoot, expectedCss) {
+  const htmlPath = await findWorkbench(appRoot);
+  const html = await fs.readFile(htmlPath, 'utf8');
+  const cssPath = path.join(path.dirname(htmlPath), 'neondreams-glow.css');
+  const owned = await ownedStylesheet(cssPath);
+  const css = owned ? await fs.readFile(cssPath, 'utf8') : undefined;
+  return {
+    workbenchPath: htmlPath,
+    linked: html.includes(tag),
+    stylesheetPresent: owned,
+    stylesheetCurrent: css === expectedCss
+  };
+}
+
+module.exports = { findWorkbench, setGlow, inspectGlow };
