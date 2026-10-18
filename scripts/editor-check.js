@@ -66,8 +66,29 @@ async function run() {
     await sheet.evaluate((element, css) => { element.textContent = css; }, renderGlow(template, { strength: 100, editorBoost: 1 }));
     assert.notDeepEqual(await page.screenshot(), maxGlow, 'Editor-only boost changes actual Monaco pixels at strength 100');
     assert.deepEqual(await colors(), originalColors, 'Boost preserves actual token foregrounds');
+    // Sticky scroll re-renders tokens under .sticky-line-content, outside .view-line.
+    await page.evaluate(() => {
+      const body = Array.from({ length: 50 }, (_, i) => `  const value${i} = "hello";`);
+      window.editor.setValue(['function neonDreams(name) {', ...body, '  return name;', '}'].join('\n'));
+      monaco.languages.registerDocumentSymbolProvider('javascript', {
+        provideDocumentSymbols: () => [{
+          name: 'neonDreams', kind: monaco.languages.SymbolKind.Function,
+          range: { startLineNumber: 1, startColumn: 1, endLineNumber: 53, endColumn: 2 },
+          selectionRange: { startLineNumber: 1, startColumn: 10, endLineNumber: 1, endColumn: 20 }
+        }]
+      });
+      window.editor.updateOptions({ stickyScroll: { enabled: true } });
+      window.editor.setScrollTop(240);
+    });
+    await page.waitForSelector('.sticky-line-content span[class*="mtk"]');
+    const stickyTokens = page.locator('.sticky-line-content span[class*="mtk"]');
+    const stickyStyles = await stickyTokens.evaluateAll(elements => elements.map(e => ({ text: e.textContent, color: getComputedStyle(e).color, shadow: getComputedStyle(e).textShadow })));
+    assert.ok(stickyStyles.length > 2, 'Actual editor sticky header contains rendered tokens');
+    assert.ok(stickyStyles.every(token => token.shadow !== 'none'), 'Pinned function header receives the same glow as editor tokens');
+    await sheet.evaluate((element, css) => { element.textContent = css; }, renderGlow(template, { editor: false }));
+    assert.ok((await stickyTokens.evaluateAll(elements => elements.map(e => getComputedStyle(e).textShadow))).every(shadow => shadow === 'none'), 'Editor switch also disables sticky-header glow');
     assert.deepEqual(errors, [], 'Actual editor loads without renderer errors');
-    console.log('Real Monaco checks passed: DOM editor tokenization, glow at 60 and 100, editor-only boost, visible pixel changes, all token spans, and unchanged foreground colors. This is not a Windows VS Code integration test.');
+    console.log('Real Monaco checks passed: DOM tokenization, glow at 60 and 100, editor boost, actual sticky-scroll headers, editor toggle, visible pixel changes, and unchanged foregrounds. This is not a Windows VS Code integration test.');
   } finally {
     if (browser) await browser.close();
     server.closeAllConnections();

@@ -22,7 +22,8 @@ async function run() {
     const css = renderGlow(template);
     const html = `<div class="monaco-workbench ${themeClass}" style="background:#000;color:#e5def5;min-height:100vh;padding:40px;font:18px monospace">
       <div class="monaco-editor"><div class="view-line"><span id="keyword" style="color:${theme.semanticTokenColors.keyword}">const</span> <span id="string" style="color:${theme.semanticTokenColors.string}">'neon'</span>
-      <span><span id="functionA" class="mtk12" style="color:#69e5ff">first()</span> <span><span id="functionB" class="mtk27" style="color:#69e5ff;text-shadow:none">second()</span></span></span></div></div>
+      <span><span id="functionA" class="mtk12" style="color:#69e5ff">first()</span> <span><span id="functionB" class="mtk27" style="color:#69e5ff;text-shadow:none">second()</span></span></span></div>
+      <div class="sticky-widget"><span class="sticky-line-number" id="stickyNumber">66</span><span class="sticky-line-content"><span><span id="stickyFunction" class="mtk12" style="color:#69e5ff">first()</span></span></span></div></div>
       <div class="xterm"><div class="xterm-rows"><div><span id="terminal" style="color:#a5e880">terminal output</span><span id="terminalAnsi" style="color:#ff70bd">pink ANSI text</span></div></div></div>
       <div class="explorer-folders"><div class="monaco-list-row"><div class="monaco-icon-label"><span class="codicon" id="fileIcon">icon</span><span id="file" class="label-name">index.js <span id="fileMatch" style="color:#69e5ff">match</span></span></div></div></div>
       <div class="repl"><div class="output expression"><span class="value"><span id="debug" style="color:#ffbb78">debug output</span></span></div></div>
@@ -50,6 +51,8 @@ async function run() {
     assert.ok(green.shadow.includes(await haloColor('#string')), 'String halo follows green');
     const shadow = id => page.locator(id).evaluate(e => getComputedStyle(e).textShadow);
     assert.equal(await shadow('#functionA'), await shadow('#functionB'), 'Nested function tokens glow consistently regardless of token class');
+    assert.equal(await shadow('#functionA'), await shadow('#stickyFunction'), 'Pinned function header matches the body token glow');
+    assert.equal(await shadow('#stickyNumber'), 'none', 'Sticky line numbers remain sharp');
     for (const id of ['#terminal', '#terminalAnsi', '#file', '#fileMatch', '#debug']) {
       assert.notEqual(await shadow(id), 'none', `${id} receives glow`);
       assert.ok((await shadow(id)).includes(await haloColor(id)), `${id} keeps its own color`);
@@ -74,6 +77,7 @@ async function run() {
     for (const [option, target] of [['editor', '#functionA'], ['terminal', '#terminal'], ['explorer', '#file'], ['debugConsole', '#debug']]) {
       await rewrite({ [option]: false });
       assert.equal(await shadow(target), 'none', `${option} can be disabled`);
+      if (option === 'editor') assert.equal(await shadow('#stickyFunction'), 'none', 'Editor toggle disables pinned headers too');
       for (const other of ['#functionA', '#terminal', '#file', '#debug'].filter(id => id !== target)) {
         assert.notEqual(await shadow(other), 'none', `Disabling ${option} preserves ${other}`);
       }
@@ -92,6 +96,7 @@ async function run() {
     for (const id of ['#terminal', '#file', '#debug']) assert.equal(await child.locator(id).evaluate(e => getComputedStyle(e).textShadow), 'none');
     await page.emulateMedia({ forcedColors: 'active' });
     assert.equal((await styles(page)).shadow, 'none', 'Forced colors suppress glow');
+    assert.equal(await shadow('#stickyFunction'), 'none', 'Forced colors suppress sticky-header glow');
     await page.emulateMedia({ forcedColors: 'none' });
     await page.emulateMedia({ contrast: 'more' });
     assert.equal((await styles(page)).shadow, 'none', 'High contrast suppresses glow');
