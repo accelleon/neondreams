@@ -37,18 +37,18 @@ async function run() {
     assert.equal(main.color, before, 'Glow preserves foreground');
     assert.notEqual(main.shadow, 'none', 'Main editor has glow');
     assert.notDeepEqual(await page.screenshot(), beforeImage, 'Glow changes visible pixels on black');
-    const haloColor = async id => page.locator(id).evaluate(e => {
+    const haloColor = async (id, opacity = 70) => page.locator(id).evaluate((e, alpha) => {
       const reference = document.createElement('span');
-      reference.style.color = `color-mix(in srgb, ${getComputedStyle(e).color} 70%, transparent)`;
+      reference.style.color = `color-mix(in srgb, ${getComputedStyle(e).color} ${alpha}%, transparent)`;
       document.body.append(reference);
       const color = getComputedStyle(reference).color;
       reference.remove();
       return color;
-    });
-    assert.ok(main.shadow.includes(await haloColor('#keyword')), 'Halo follows token color');
+    }, opacity);
+    assert.ok(main.shadow.includes(await haloColor('#keyword', 60)), 'Halo follows token color');
     const green = await page.locator('#string').evaluate(e => ({ color: getComputedStyle(e).color, shadow: getComputedStyle(e).textShadow }));
     assert.notEqual(green.color, main.color, 'Token categories remain distinct');
-    assert.ok(green.shadow.includes(await haloColor('#string')), 'String halo follows green');
+    assert.ok(green.shadow.includes(await haloColor('#string', 60)), 'String halo follows green');
     const shadow = id => page.locator(id).evaluate(e => getComputedStyle(e).textShadow);
     assert.equal(await shadow('#functionA'), await shadow('#functionB'), 'Nested function tokens glow consistently regardless of token class');
     assert.equal(await shadow('#functionA'), await shadow('#stickyFunction'), 'Pinned function header matches the body token glow');

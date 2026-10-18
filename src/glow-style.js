@@ -11,10 +11,16 @@ function renderGlow(template, options = {}) {
   const shadow = strength === 0 ? 'none' : layers().join(', ');
   const boost = typeof options.editorBoost === 'number' && Number.isFinite(options.editorBoost)
     ? Math.min(4, Math.max(1, options.editorBoost)) : 2;
-  const editorLayers = layers();
-  // Stack colored halos to increase visible energy without whitening the glyph or
-  // spreading all of the extra glow beyond the editor's viewport/line boundaries.
-  for (let remaining = boost - 1; remaining > 0; remaining -= 1) editorLayers.push(...layers(Math.min(1, remaining), 0.85));
+  // Give the editor a visible outer halo, rather than piling blur onto the glyph edge.
+  // Keep the terminal profile independent; all halo layers retain the token's own hue.
+  const editorScale = strength / 100;
+  const editorHalos = (profile, opacity = 1) => profile.map(([radius, alpha]) =>
+    `0 0 ${number(radius * Math.sqrt(editorScale))}px color-mix(in srgb, currentColor ${number(alpha * editorScale * opacity)}%, transparent)`
+  );
+  const editorLayers = editorHalos([[4, 100], [8, 100], [14, 90], [22, 60]]);
+  for (let remaining = boost - 1; remaining > 0; remaining -= 1) {
+    editorLayers.push(...editorHalos([[8, 80], [14, 65], [22, 40]], Math.min(1, remaining)));
+  }
   const declarations = [`--nd-text-glow: ${shadow}`, `--nd-editor-text-glow: ${strength === 0 ? 'none' : editorLayers.join(', ')}`];
   for (const [option, property] of [['editor', 'editor'], ['terminal', 'terminal'], ['explorer', 'explorer'], ['debugConsole', 'debug']]) {
     declarations.push(`--nd-${property}-glow: ${options[option] === false ? 'none' : option === 'editor' ? 'var(--nd-editor-text-glow)' : 'var(--nd-text-glow)'}`);

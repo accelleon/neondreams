@@ -66,6 +66,12 @@ async function run() {
     await sheet.evaluate((element, css) => { element.textContent = css; }, renderGlow(template, { strength: 100, editorBoost: 1 }));
     assert.notDeepEqual(await page.screenshot(), maxGlow, 'Editor-only boost changes actual Monaco pixels at strength 100');
     assert.deepEqual(await colors(), originalColors, 'Boost preserves actual token foregrounds');
+    await page.evaluate(() => window.editor.updateOptions({ fontSize: 13, lineHeight: 20 }));
+    await sheet.evaluate((element, css) => { element.textContent = css; }, renderGlow(template, { strength: 0 }));
+    const smallFontOff = await page.screenshot();
+    await sheet.evaluate((element, css) => { element.textContent = css; }, renderGlow(template, { strength: 100, editorBoost: 2 }));
+    assert.notDeepEqual(await page.screenshot(), smallFontOff, 'Halo changes actual editor pixels at a normal 13px font size');
+    assert.deepEqual(await colors(), originalColors, 'Small-font glow preserves token foregrounds');
     // Sticky scroll re-renders tokens under .sticky-line-content, outside .view-line.
     await page.evaluate(() => {
       const body = Array.from({ length: 50 }, (_, i) => `  const value${i} = "hello";`);

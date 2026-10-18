@@ -2,7 +2,7 @@
 /* VS Code clones head stylesheets into auxiliary windows. Keep this a plain stylesheet. */
 .monaco-workbench.accelleon-neondreams-themes-neon-dreams-color-theme-json {
   --nd-text-glow: 0 0 2px color-mix(in srgb, currentColor 70%, transparent), 0 0 6px color-mix(in srgb, currentColor 60%, transparent), 0 0 14px color-mix(in srgb, currentColor 40%, transparent);
-  --nd-editor-text-glow: var(--nd-text-glow), var(--nd-text-glow);
+  --nd-editor-text-glow: 0 0 3.1px color-mix(in srgb, currentColor 60%, transparent), 0 0 6.2px color-mix(in srgb, currentColor 60%, transparent), 0 0 10.84px color-mix(in srgb, currentColor 54%, transparent), 0 0 17.04px color-mix(in srgb, currentColor 36%, transparent), 0 0 6.2px color-mix(in srgb, currentColor 48%, transparent), 0 0 10.84px color-mix(in srgb, currentColor 39%, transparent), 0 0 17.04px color-mix(in srgb, currentColor 24%, transparent);
   --nd-cursor-glow: 0 0 5px #ff70bd99, 0 0 12px #ff70bd66;
   --nd-row-glow: inset 2px 0 0 #69e5ff, inset 5px 0 8px #69e5ff12;
   --nd-status-glow: 0 -1px 8px #bd93ff20;

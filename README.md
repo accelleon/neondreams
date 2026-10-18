@@ -16,7 +16,7 @@ TextMate and semantic tokens share the palette. Every syntax color has at least 
 
 ## Try it
 
-[Download Neon Dreams 0.1.5 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.5.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
+[Download Neon Dreams 0.1.6 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.6.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
 
 Open this folder in desktop VS Code and press **F5** to launch the Extension Development Host. Select **Preferences: Color Theme → Neon Dreams**. No dependency installation is required to run the theme or extension source.
 
@@ -27,7 +27,7 @@ npm ci
 npm run check
 npm test
 npm run package
-code --install-extension neondreams-0.1.5.vsix
+code --install-extension neondreams-0.1.6.vsix
 ```
 
 Select Neon Dreams separately in any profile or workspace that overrides `workbench.colorTheme`. The default user theme applies to ordinary new windows. Native colors also follow detached editor windows.
@@ -51,11 +51,13 @@ Run **Neon Dreams: Configure Glow Strength** for presets, or open Settings and s
 }
 ```
 
-Strength 0 removes text and decorative glow; 25 is subtle, 60 balanced, 80 strong, and 100 maximum. At 60 the three text halos have radii of 2, 6, and 14 pixels. Strength changes their spread and opacity together while preserving each token's foreground. Function tokens use the same rule regardless of their TextMate or semantic-token class, including nested spans. Explorer filenames, highlighted filename matches, Debug Console text, and terminal DOM text each use their own foreground color for the halo. File icons stay sharp.
+Strength 0 removes text and decorative glow; 25 is subtle, 60 balanced, 80 strong, and 100 maximum. The editor uses a wider neon halo: at strength 100 its base layers have radii of 4, 8, 14, and 22 pixels, with extra outer layers controlled by Editor Boost. The original terminal/explorer/debug profile is unchanged (2, 6, and 14 pixels at strength 60). Strength changes spread and opacity while preserving token foregrounds. Function tokens use the same rule regardless of their TextMate or semantic-token class, including nested spans. File icons stay sharp.
 
 Pinned sticky-scroll headers use the same editor halo, boost, and toggle as the code body; sticky line numbers stay sharp. Rust inlay hints retain their muted foreground/background styling, so their glow is naturally softer than bright syntax tokens.
 
-**Editor Boost** independently increases the density of the editor's colored halos, without increasing terminal or explorer glow. The default is **2×**; choose **1×** for the previous editor intensity, or increase up to **4×** if it remains faint on your display. It adds color-matched halo layers instead of whitening the text or blurring the editor. Strength 0 and the editor toggle still disable it. Reload each window after changing the boost.
+**Editor Boost** independently increases the density of the editor's outer colored halos, without increasing terminal or explorer glow. The default is **2×**; choose **1×** for the base halo, or increase up to **4×** if it remains faint on your display. It adds color-matched outer halo layers instead of thickening the letter edges, whitening the text, or blurring the editor. Strength 0 and the editor toggle still disable it. Reload each window after changing the boost.
+
+[Compare the previous and revised glow](docs/glow-comparison.png) in standalone Monaco editors using HTML at 20px and Rust at 13px. Both use strength 100 and boost 2×. This preview demonstrates the halo profile; standalone tokenization differs from VS Code language extensions, and it is not a Windows VS Code screenshot.
 
 When glow is already installed, changes and extension updates automatically regenerate its stylesheet; **reload every open window** to apply it. These settings never install a disabled patch. If startup refresh fails or the status shows outdated CSS, run **Enable Glow** again. Settings apply to the VS Code installation, so different profiles cannot maintain different installed strengths at the same time; the last applied settings win.
 
