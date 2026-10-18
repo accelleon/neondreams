@@ -6,6 +6,7 @@ const assert = require('node:assert/strict');
 const os = require('node:os');
 const { createServer } = require('node:http');
 const { setGlow } = require('../src/glow');
+const { renderGlow } = require('../src/glow-style');
 const theme = require('../themes/neon-dreams-color-theme.json');
 
 async function run() {
@@ -17,12 +18,19 @@ async function run() {
     const context = await browser.newContext();
     const page = await context.newPage();
     const themeClass = 'accelleon-neondreams-themes-neon-dreams-color-theme-json';
-    const css = await fs.readFile(path.join(__dirname, '../assets/glow.css'), 'utf8');
-    const html = `<div class="monaco-workbench ${themeClass}" style="background:#000;min-height:100vh;padding:40px;font:18px monospace"><div class="monaco-editor"><div class="view-line"><span id="keyword" style="color:${theme.semanticTokenColors.keyword}">const</span> <span id="string" style="color:${theme.semanticTokenColors.string}">'neon'</span></div></div><div class="monaco-menu"><div class="action-item focused" style="color:#69e5ff">Menu item</div></div></div>`;
+    const template = await fs.readFile(path.join(__dirname, '../assets/glow.css'), 'utf8');
+    const css = renderGlow(template);
+    const html = `<div class="monaco-workbench ${themeClass}" style="background:#000;color:#e5def5;min-height:100vh;padding:40px;font:18px monospace">
+      <div class="monaco-editor"><div class="view-line"><span id="keyword" style="color:${theme.semanticTokenColors.keyword}">const</span> <span id="string" style="color:${theme.semanticTokenColors.string}">'neon'</span>
+      <span><span id="functionA" class="mtk12" style="color:#69e5ff">first()</span> <span><span id="functionB" class="mtk27" style="color:#69e5ff;text-shadow:none">second()</span></span></span></div></div>
+      <div class="xterm"><div class="xterm-rows"><div><span id="terminal" style="color:#a5e880">terminal output</span><span id="terminalAnsi" style="color:#ff70bd">pink ANSI text</span></div></div></div>
+      <div class="explorer-folders"><div class="monaco-list-row"><div class="monaco-icon-label"><span class="codicon" id="fileIcon">icon</span><span id="file" class="label-name">index.js <span id="fileMatch" style="color:#69e5ff">match</span></span></div></div></div>
+      <div class="repl"><div class="output expression"><span class="value"><span id="debug" style="color:#ffbb78">debug output</span></span></div></div>
+      <div class="monaco-menu"><div class="action-item focused" style="color:#69e5ff">Menu item</div></div></div>`;
     await page.setContent(html);
     const before = await page.locator('#keyword').evaluate(e => getComputedStyle(e).color);
     const beforeImage = await page.screenshot();
-    await page.addStyleTag({ content: css });
+    const sheet = await page.addStyleTag({ content: css });
     const styles = p => p.locator('#keyword').evaluate(e => ({ color: getComputedStyle(e).color, shadow: getComputedStyle(e).textShadow }));
     const main = await styles(page);
     assert.equal(main.color, before, 'Glow preserves foreground');
@@ -40,7 +48,33 @@ async function run() {
     const green = await page.locator('#string').evaluate(e => ({ color: getComputedStyle(e).color, shadow: getComputedStyle(e).textShadow }));
     assert.notEqual(green.color, main.color, 'Token categories remain distinct');
     assert.ok(green.shadow.includes(await haloColor('#string')), 'String halo follows green');
+    const shadow = id => page.locator(id).evaluate(e => getComputedStyle(e).textShadow);
+    assert.equal(await shadow('#functionA'), await shadow('#functionB'), 'Nested function tokens glow consistently regardless of token class');
+    for (const id of ['#terminal', '#terminalAnsi', '#file', '#fileMatch', '#debug']) {
+      assert.notEqual(await shadow(id), 'none', `${id} receives glow`);
+      assert.ok((await shadow(id)).includes(await haloColor(id)), `${id} keeps its own color`);
+    }
+    assert.equal(await shadow('#fileIcon'), 'none', 'File icons remain sharp');
     assert.notEqual(await page.locator('.action-item').evaluate(e => getComputedStyle(e).boxShadow), 'none');
+
+    const rewrite = options => sheet.evaluate((e, contents) => { e.textContent = contents; }, renderGlow(template, options));
+    await rewrite({ strength: 25 });
+    const subtle = (await styles(page)).shadow;
+    await rewrite({ strength: 100 });
+    const strong = (await styles(page)).shadow;
+    assert.notEqual(subtle, strong, 'Strength changes the rendered shadow');
+    assert.equal((await styles(page)).color, before, 'Strength leaves foreground unchanged');
+    for (const [option, target] of [['editor', '#functionA'], ['terminal', '#terminal'], ['explorer', '#file'], ['debugConsole', '#debug']]) {
+      await rewrite({ [option]: false });
+      assert.equal(await shadow(target), 'none', `${option} can be disabled`);
+      for (const other of ['#functionA', '#terminal', '#file', '#debug'].filter(id => id !== target)) {
+        assert.notEqual(await shadow(other), 'none', `Disabling ${option} preserves ${other}`);
+      }
+    }
+    await rewrite({ strength: 0 });
+    for (const id of ['#keyword', '#functionB', '#terminal', '#file', '#debug']) assert.equal(await shadow(id), 'none', 'Zero disables all text glow');
+    assert.equal(await page.locator('.action-item').evaluate(e => getComputedStyle(e).boxShadow), 'none');
+    await rewrite({});
     // Match VS Code auxiliary-window behavior: clone head stylesheets and body classes.
     const child = await context.newPage();
     await child.setContent(html);
@@ -48,6 +82,7 @@ async function run() {
     assert.deepEqual(await styles(child), main, 'Copied stylesheet works in detached document');
     await child.locator('.monaco-workbench').evaluate((e, cls) => e.classList.remove(cls), themeClass);
     assert.equal((await styles(child)).shadow, 'none', 'Other themes have no glow');
+    for (const id of ['#terminal', '#file', '#debug']) assert.equal(await child.locator(id).evaluate(e => getComputedStyle(e).textShadow), 'none');
     await page.emulateMedia({ forcedColors: 'active' });
     assert.equal((await styles(page)).shadow, 'none', 'Forced colors suppress glow');
     await page.emulateMedia({ forcedColors: 'none' });
@@ -84,7 +119,7 @@ async function run() {
         await new Promise(resolve => server.close(resolve));
       }
     } finally { await fs.rm(appRoot, { recursive: true, force: true }); }
-    console.log('Browser checks passed: visible pixels on black, foreground preservation, token-specific halos, menus, detached-document styles, theme switching, accessibility overrides, and installed stylesheet loading/removal under CSP.');
+    console.log('Browser checks passed: visible glow, strength levels and zero, per-surface controls, nested functions, ANSI DOM terminal, explorer labels, debug console, foreground preservation, detached-document styles, theme switching, accessibility, and installed stylesheet loading/removal under CSP.');
   } finally { await browser.close(); }
 }
 run().catch(error => { console.error(error); process.exitCode = 1; });

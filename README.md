@@ -16,7 +16,7 @@ TextMate and semantic tokens share the palette. Every syntax color has at least 
 
 ## Try it
 
-[Download Neon Dreams 0.1.2 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.2.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
+[Download Neon Dreams 0.1.3 (.vsix)](https://github.com/accelleon/neondreams/raw/refs/heads/main/releases/neondreams-0.1.3.vsix), then run **Extensions: Install from VSIX…** in VS Code and select the downloaded file.
 
 Open this folder in desktop VS Code and press **F5** to launch the Extension Development Host. Select **Preferences: Color Theme → Neon Dreams**. No dependency installation is required to run the theme or extension source.
 
@@ -27,18 +27,38 @@ npm ci
 npm run check
 npm test
 npm run package
-code --install-extension neondreams-0.1.2.vsix
+code --install-extension neondreams-0.1.3.vsix
 ```
 
 Select Neon Dreams separately in any profile or workspace that overrides `workbench.colorTheme`. The default user theme applies to ordinary new windows. Native colors also follow detached editor windows.
 
 ## Optional glow (experimental desktop feature)
 
-Run **Neon Dreams: Enable Glow (Desktop, Experimental)**, accept the installation modification dialog, then **quit and reopen all VS Code windows**. Glow follows each token's `currentColor`, with three halo layers at 2, 6, and 14 pixels. It never replaces the text foreground, changes text opacity, or blurs the editor. High contrast OS settings suppress the glow.
+Run **Neon Dreams: Enable Glow (Desktop, Experimental)**, choose **Enable Glow + DOM Rendering** for consistent editor and terminal support, and reload each VS Code window. The DOM option sets `editor.experimentalGpuAcceleration` and `terminal.integrated.gpuAcceleration` to `off` in user settings; terminal output can render slower. **Enable Glow Only** leaves rendering settings alone. Glow follows each token's `currentColor`; it never replaces the text foreground, changes text opacity, or blurs the editor. High contrast OS settings suppress the glow.
 
-After updating this extension, **run Enable Glow again** to replace the previously installed stylesheet, then restart every window. Installing a newer VSIX alone does not update the stylesheet in the VS Code installation.
+### Strength and surfaces
 
-If glow remains invisible, run **Neon Dreams: Check Glow Status**. The dialog reports the active theme, missing or outdated stylesheet, VS Code version, and editor GPU setting. It checks the patch on disk; it cannot inspect the renderer's loaded CSS. If `editor.experimentalGpuAcceleration` is `on`, set it to `off` and reload: canvas-rendered text cannot receive CSS text shadows. Windows contrast themes / forced colors also intentionally suppress glow. Check that Neon Dreams is selected in the affected window.
+Run **Neon Dreams: Configure Glow Strength** for presets, or open Settings and search for **Neon Dreams** to choose any strength from 0 to 100 and switch individual surfaces on or off:
+
+```json
+{
+  "neondreams.glow.strength": 60,
+  "neondreams.glow.editor": true,
+  "neondreams.glow.terminal": true,
+  "neondreams.glow.explorer": true,
+  "neondreams.glow.debugConsole": true
+}
+```
+
+Strength 0 removes text and decorative glow; 25 is subtle, 60 balanced, 80 strong, and 100 maximum. At 60 the three text halos have radii of 2, 6, and 14 pixels. Strength changes their spread and opacity together while preserving each token's foreground. Function tokens use the same rule regardless of their TextMate or semantic-token class, including nested spans. Explorer filenames, highlighted filename matches, Debug Console text, and terminal DOM text each use their own foreground color for the halo. File icons stay sharp.
+
+When glow is already installed, changes and extension updates automatically regenerate its stylesheet; **reload every open window** to apply it. These settings never install a disabled patch. If startup refresh fails or the status shows outdated CSS, run **Enable Glow** again. Settings apply to the VS Code installation, so different profiles cannot maintain different installed strengths at the same time; the last applied settings win.
+
+### Missing glow and rendering modes
+
+If glow remains invisible, run **Neon Dreams: Check Glow Status**. The dialog reports the selected theme, strength and surfaces, missing or outdated stylesheet, VS Code version, and editor/terminal GPU settings. It checks the patch on disk; it cannot inspect the renderer's loaded CSS.
+
+GPU-rendered editor text and WebGL-rendered terminal text do not use DOM spans and cannot receive CSS text shadows. Run **Neon Dreams: Use Compatible Text Rendering** to opt into DOM rendering, then reload all windows. Existing terminals may need to be recreated. Workspace settings can override user rendering preferences; check the effective GPU modes in Glow Status if a particular project still differs. You can switch `terminal.integrated.gpuAcceleration` back to `auto` and `editor.experimentalGpuAcceleration` back to your preferred value in Settings; disabling glow does not undo rendering preferences. Windows contrast themes / forced colors intentionally suppress glow. Check that Neon Dreams is selected in the affected window.
 
 VS Code has no supported theme API for text shadows. This command adds one local stylesheet link to the desktop workbench HTML; it does not weaken the Content Security Policy, alter checksums, or suppress integrity checks. VS Code may report the modified installation as corrupt. Do not enable glow if this is unacceptable. It requires a writable installation; the extension does not elevate privileges. Managed, read-only, signed, or platform-restricted installations may prevent it or reject the modified application. Theme colors still work.
 

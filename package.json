@@ -2,7 +2,7 @@
   "name": "neondreams",
   "displayName": "Neon Dreams",
   "description": "A readable true-black synthwave theme with distinct syntax colors and optional, color-preserving glow.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "accelleon",
   "license": "MIT",
   "repository": {
@@ -51,18 +51,66 @@
       {
         "command": "neondreams.glowStatus",
         "title": "Neon Dreams: Check Glow Status"
+      },
+      {
+        "command": "neondreams.configureGlow",
+        "title": "Neon Dreams: Configure Glow Strength"
+      },
+      {
+        "command": "neondreams.compatibleRendering",
+        "title": "Neon Dreams: Use Compatible Text Rendering"
       }
-    ]
+    ],
+    "configuration": {
+      "title": "Neon Dreams",
+      "properties": {
+        "neondreams.glow.strength": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "maximum": 100,
+          "scope": "application",
+          "description": "Glow strength from 0 (off) to 100 (maximum). Updates the installed stylesheet when glow is enabled; reload each window to apply. Shared by windows of this VS Code installation."
+        },
+        "neondreams.glow.editor": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Enable glow on editor. Reload each window after changing."
+        },
+        "neondreams.glow.terminal": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Enable glow on terminal (requires terminal.integrated.gpuAcceleration off). Reload each window after changing."
+        },
+        "neondreams.glow.explorer": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Enable glow on file explorer labels. Reload each window after changing."
+        },
+        "neondreams.glow.debugConsole": {
+          "type": "boolean",
+          "default": true,
+          "scope": "application",
+          "description": "Enable glow on Debug Console. Reload each window after changing."
+        }
+      }
+    }
   },
   "scripts": {
     "test": "node --test",
     "test:browser": "node scripts/browser-check.js",
-    "check": "node --check src/extension.js && node --check src/glow.js && node scripts/validate-theme.js",
+    "check": "node --check src/extension.js && node --check src/glow.js && node --check src/glow-style.js && node scripts/validate-theme.js",
     "package": "vsce package --no-dependencies",
     "vscode:prepublish": "npm run check"
   },
   "devDependencies": {
     "@vscode/vsce": "3.7.1",
     "@playwright/test": "1.61.1"
-  }
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ]
 }
